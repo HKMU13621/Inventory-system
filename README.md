@@ -1,8 +1,8 @@
-#Inventory-system for COMP350F
+# Inventory-system for COMP350F
 
-##How to run the program
-####Windows version:
-#####on CMD 
+## How to run the program
+#### Windows version:
+##### on CMD 
 ```
 cd Inventory-system
 ```
