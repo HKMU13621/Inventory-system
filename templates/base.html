@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Inventory System{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}">
+    <!-- Add Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<!-- Add Bootstrap Icons -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/dashboard.css') }}">
+
+    <style>
+        /* Add these styles directly in base template for crucial navigation styling */
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2ecc71;
+            --background-color: #f5f6fa;
+            --text-color: #2c3e50;
+            --error-color: #e74c3c;
+            --nav-height: 60px;
+            --nav-background: #ffffff;
+            --nav-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: var(--background-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .navbar {
+            height: var(--nav-height);
+            background-color: var(--nav-background);
+            box-shadow: var(--nav-shadow);
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+        }
+
+        .nav-brand {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        .nav-brand a {
+            color: var(--text-color);
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .nav-links a {
+            color: var(--text-color);
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .nav-links a:hover {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .nav-links a.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            color: var(--text-color);
+        }
+
+        .user-info i {
+            color: var(--primary-color);
+        }
+
+        .logout-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            color: var(--error-color) !important;
+            transition: background-color 0.3s !important;
+        }
+
+        .logout-btn:hover {
+            background-color: #ffebee !important;
+        }
+
+        .main-content {
+            margin-top: var(--nav-height);
+            padding: 2rem;
+            flex-grow: 1;
+        }
+
+        .footer {
+            background-color: var(--nav-background);
+            padding: 1rem;
+            text-align: center;
+            color: var(--text-color);
+            margin-top: auto;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .navbar {
+                padding: 0 1rem;
+            }
+
+            .nav-links {
+                gap: 0.5rem;
+            }
+
+            .nav-links a {
+                padding: 0.5rem;
+            }
+
+            .user-info {
+                display: none;
+            }
+
+            .nav-brand {
+                font-size: 1.2rem;
+            }
+        }
+
+        /* Alert styles */
+        .alert {
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+
+        /* Loading overlay */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.8);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-brand">
+            <i class="fas fa-boxes"></i> <a href="/" >Inventory System</a>
+        </div>
+        <div class="nav-links">
+            {% if user %}
+                <a href="/products" class="{{ 'active' if request.url.path == '/products' else '' }}">
+                    <i class="fas fa-box"></i> Products
+                </a>
+                {% if user.role in ['sales', 'manager'] %}
+                <a href="/sales" class="{{ 'active' if request.url.path == '/sales' else '' }}">
+                    <i class="fas fa-shopping-cart"></i> Sales
+                </a>
+                {% endif %}
+                {% if user.role == 'manager' %}
+                <a href="/users" class="{{ 'active' if request.url.path == '/users' else '' }}">
+                    <i class="fas fa-users"></i> User Management
+                </a>
+                {% endif %}
+                <span class="user-info">
+                    <i class="fas fa-user"></i>
+                    {{ user.username }} ({{ user.role|title }})
+                </span>
+                <a href="/logout" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+            {% endif %}
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        {% if error %}
+        <div class="alert alert-error">
+            <i class="fas fa-exclamation-circle"></i>
+            {{ error }}
+        </div>
+        {% endif %}
+
+        {% if success %}
+        <div class="alert alert-success">
+            <i class="fas fa-check-circle"></i>
+            {{ success }}
+        </div>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>&copy; 2024 Inventory System. All rights reserved.</p>
+    </footer>
+
+    <!-- Common JavaScript -->
+    <script>
+        // Show loading overlay
+        function showLoading() {
+            document.querySelector('.loading-overlay').style.display = 'flex';
+        }
+
+        // Hide loading overlay
+        function hideLoading() {
+            document.querySelector('.loading-overlay').style.display = 'none';
+        }
+
+        // Auto-hide alerts after 5 seconds
+        document.addEventListener('DOMContentLoaded', function() {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                setTimeout(() => {
+                    alert.style.opacity = '0';
+                    alert.style.transition = 'opacity 0.5s';
+                    setTimeout(() => alert.remove(), 500);
+                }, 5000);
+            });
+        });
+
+        // Add active class to current navigation link
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentPath = window.location.pathname;
+            const navBrand = document.querySelectorAll('.nav-brand a');
+            const navLinks = document.querySelectorAll('.nav-links a');
+            navLinks.forEach(link => {
+                if (link.getAttribute('href') === currentPath) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+
+    <!-- Additional Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js"></script>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

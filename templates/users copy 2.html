@@ -1,0 +1,232 @@
+{# templates/users.html #}
+{% extends "base.html" %}
+
+{% block title %}User Management - Inventory System{% endblock %}
+
+{% block content %}
+<div class="user-container">
+    <div class="user-header">
+        <h2>User Management</h2>
+        <button class="add-btn" onclick="showAddUserModal()">Add User</button>
+    </div>
+
+    <!-- User Stats -->
+    <div class="stats-cards">
+        <div class="stat-card">
+            <h3>Total Users</h3>
+            <p class="amount">{{ users|length }}</p>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>Users by Role</h3>
+                <div class="role-stats">
+                    {% set roles = {'manager': 0, 'sales': 0, 'customer': 0} %}
+                    {% for user in users %}
+                        {% if user.role in roles %}
+                            {% set _ = roles.update({user.role: roles[user.role] + 1}) %}
+                        {% endif %}
+                    {% endfor %}
+                    {% for role, count in roles.items() %}
+                    <div class="role-stat">
+                        <span class="role-label">{{ role|title }}</span>
+                        <span class="role-count">{{ count }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <h3>Active Users</h3>
+            <p class="amount">{{ users|selectattr('is_active', 'eq', true)|list|length }}</p>
+        </div>
+    </div>
+
+    <!-- User Activity Log -->
+    <div class="activity-log">
+        <h3>Recent Activity</h3>
+        <div class="activity-table-container">
+            <table class="activity-table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>User</th>
+                        <th>Action</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for activity in activities %}
+                    <tr>
+                        <td>{{ activity.timestamp }}</td>
+                        <td>{{ activity.username }}</td>
+                        <td>
+                            <span class="activity-badge activity-{{ activity.action }}">
+                                {{ activity.action }}
+                            </span>
+                        </td>
+                        <td>{{ activity.details }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- User List -->
+    <div class="user-table-container">
+        <h3>Users</h3>
+        <div class="table-actions">
+            <div class="search-box">
+                <input type="text" id="userSearch" placeholder="Search users..." onkeyup="filterUsers()">
+            </div>
+            <div class="role-filter">
+                <select id="roleFilter" onchange="filterUsers()">
+                    <option value="">All Roles</option>
+                    {% for role in valid_roles %}
+                    <option value="{{ role }}">{{ role|title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <table class="user-table">
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Full Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr data-username="{{ user.username }}" data-role="{{ user.role }}">
+                    <td>{{ user.username }}</td>
+                    <td>{{ user.full_name }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>
+                        <span class="role-badge role-{{ user.role }}">
+                            {{ user.role|title }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="status-badge status-{{ 'active' if user.is_active else 'inactive' }}">
+                            {{ 'Active' if user.is_active else 'Inactive' }}
+                        </span>
+                    </td>
+                    <td>{{ user.created_at }}</td>
+                    <td class="action-buttons">
+                        <button onclick="editUser('{{ user.username }}')" class="edit-btn">
+                            Edit
+                        </button>
+                        <button onclick="resetPassword('{{ user.username }}')" class="reset-btn">
+                            Reset
+                        </button>
+                        <button onclick="toggleUserStatus('{{ user.username }}')" 
+                                class="{{ 'deactivate-btn' if user.is_active else 'activate-btn' }}">
+                            {{ 'Deactivate' if user.is_active else 'Activate' }}
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add User Modal -->
+<div id="addUserModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal('addUserModal')">&times;</span>
+        <h2>Add New User</h2>
+        <form id="addUserForm" onsubmit="return handleAddUser(event)">
+            <div class="form-group">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" required pattern="[a-zA-Z0-9_]{3,20}">
+                <span class="help-text">3-20 characters, letters, numbers and underscore only</span>
+            </div>
+            <div class="form-group">
+                <label for="full_name">Full Name:</label>
+                <input type="text" id="full_name" name="full_name" required>
+            </div>
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+            <div class="form-group">
+                <label for="role">Role:</label>
+                <select id="role" name="role" required>
+                    {% for role in valid_roles %}
+                    <option value="{{ role }}">{{ role|title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required minlength="8">
+                <span class="help-text">Minimum 8 characters</span>
+            </div>
+            <div class="form-group">
+                <label for="confirm_password">Confirm Password:</label>
+                <input type="password" id="confirm_password" name="confirm_password" required>
+            </div>
+            <button type="submit" class="submit-btn">Create User</button>
+        </form>
+    </div>
+</div>
+
+<!-- Edit User Modal -->
+<div id="editUserModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal('editUserModal')">&times;</span>
+        <h2>Edit User</h2>
+        <form id="editUserForm" onsubmit="return handleEditUser(event)">
+            <input type="hidden" id="edit_username" name="username">
+            <div class="form-group">
+                <label for="edit_full_name">Full Name:</label>
+                <input type="text" id="edit_full_name" name="full_name" required>
+            </div>
+            <div class="form-group">
+                <label for="edit_email">Email:</label>
+                <input type="email" id="edit_email" name="email" required>
+            </div>
+            <div class="form-group">
+                <label for="edit_role">Role:</label>
+                <select id="edit_role" name="role" required>
+                    {% for role in valid_roles %}
+                    <option value="{{ role }}">{{ role|title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="submit-btn">Update User</button>
+        </form>
+    </div>
+</div>
+
+<!-- Reset Password Modal -->
+<div id="resetPasswordModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal('resetPasswordModal')">&times;</span>
+        <h2>Reset Password</h2>
+        <form id="resetPasswordForm" onsubmit="return handleResetPassword(event)">
+            <input type="hidden" id="reset_username" name="username">
+            <div class="form-group">
+                <label for="new_password">New Password:</label>
+                <input type="password" id="new_password" name="new_password" required minlength="8">
+                <span class="help-text">Minimum 8 characters</span>
+            </div>
+            <div class="form-group">
+                <label for="confirm_new_password">Confirm New Password:</label>
+                <input type="password" id="confirm_new_password" name="confirm_new_password" required>
+            </div>
+            <button type="submit" class="submit-btn">Reset Password</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', path='/js/users.js') }}"></script>
+{% endblock %}

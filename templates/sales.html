@@ -1,0 +1,112 @@
+{# templates/sales.html #}
+{% extends "base.html" %}
+
+{% block title %}Sales Management - Inventory System{% endblock %}
+
+{% block content %}
+<div class="sales-container">
+    <div class="sales-header">
+        <h2>Sales Management</h2>
+        {% if user.role in ['sales', 'manager'] %}
+        <button class="add-sale-btn" onclick="showNewSaleModal()">New Sale</button>
+        {% endif %}
+    </div>
+
+    <!-- Sales Summary Cards -->
+    <div class="summary-cards">
+        <div class="summary-card">
+            <h3>Today's Sales</h3>
+            <p class="amount">${{ "%.2f"|format(today_sales) }}</p>
+        </div>
+        <div class="summary-card">
+            <h3>Total Sales</h3>
+            <p class="amount">${{ "%.2f"|format(total_sales) }}</p>
+        </div>
+        <div class="summary-card">
+            <h3>Total Orders</h3>
+            <p class="amount">{{ total_orders }}</p>
+        </div>
+    </div>
+
+    <!-- Sales History Table -->
+    <div class="sales-table-container">
+        <h3>Sales History</h3>
+        <table class="sales-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Product</th>
+                    <th>Quantity</th>
+                    <th>Total Price</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sale in sales %}
+                <tr>
+                    <td>{{ sale.date.strftime('%Y-%m-%d %H:%M') if sale.date is not string else sale.date }}</td>
+                    <td>{{ products[sale.product_id].name if sale.product_id in products else 'Unknown Product' }}</td>
+                    <td>{{ sale.quantity }}</td>
+                    <td>${{ "%.2f"|format(sale.total_price) }}</td>
+                    <td>
+                        <span class="status-badge status-{{ sale.status.lower() }}">
+                            {{ sale.status }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- New Sale Modal -->
+<div id="newSaleModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal('newSaleModal')">&times;</span>
+        <h2>Create New Sale</h2>
+        <form id="newSaleForm" onsubmit="return handleNewSale(event)">
+            <div class="form-group">
+                <label for="product">Product:</label>
+                <select id="product" name="product_id" required onchange="updatePrice()">
+                    <option value="">Select a product</option>
+                    {% for product in products.values() %}
+                    {% if product.quantity > 0 %}
+                    <option value="{{ product.id }}" 
+                            data-price="{{ product.price }}"
+                            data-stock="{{ product.quantity }}">
+                        {{ product.name }} (Stock: {{ product.quantity }})
+                    </option>
+                    {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="quantity">Quantity:</label>
+                <input type="number" id="quantity" name="quantity" min="1" required onchange="updateTotal()">
+                <span id="stock-warning" class="warning-text"></span>
+            </div>
+            <div class="form-group">
+                <label>Unit Price:</label>
+                <p id="unit-price">$0.00</p>
+            </div>
+            <div class="form-group">
+                <label>Total Price:</label>
+                <p id="total-price">$0.00</p>
+            </div>
+            <button type="submit" class="submit-btn">Complete Sale</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Debug log to check products data
+    console.log('Available products:', {{ products|tojson|safe }});
+    
+    // Make products data available to JavaScript
+    const products = {{ products|tojson|safe }};
+</script>
+<script src="{{ url_for('static', path='/js/sales.js') }}"></script>
+{% endblock %}
