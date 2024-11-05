@@ -514,7 +514,7 @@ def verify_password(stored_password: str, provided_password: str) -> bool:
     """Verify a stored password against one provided by user"""
     return pwd_context.verify(provided_password, stored_password)
 
-VALID_ROLES = ['manager', 'sales', 'customer']
+VALID_ROLES = ['manager', 'sales']
 
 # User management routes
 async def log_activity(username: str, action: str, details: str, request: Request):
