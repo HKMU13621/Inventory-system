@@ -15,8 +15,8 @@ pip install -r requirements.txt
 ```
 uvicorn main:app --reload  
 ```
-Mac Version:
-On Terminal
+#### Mac Version:
+##### On Terminal
 ```
 cd Inventory-system
 ```
