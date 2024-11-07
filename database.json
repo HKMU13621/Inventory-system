@@ -1,13 +1,5 @@
 {
     "users": {
-        "sales1": {
-            "email": "sales1@example.com",
-            "password": "hashed_password_here",
-            "role": "sales",
-            "full_name": "Sales User",
-            "is_active": true,
-            "created_at": "06/11/2024"
-        },
         "admin": {
             "email": "admin@example.com",
             "password": "$2b$12$1Vs3Wx6H9YiTkWoRMW.N7O/GAhJvaQDtIcDj1xfeEByPilBzlHn7e",
@@ -15,6 +7,14 @@
             "full_name": "Admin User",
             "is_active": true,
             "created_at": "06/11/2024"
+        },
+        "sales1": {
+            "email": "Sales1@example.com",
+            "password": "$2b$12$zszSixAHjQwaXBLuwLQhA.tTPGwYrxVNML7IA0bwAQ.SfkjhCwLgm",
+            "full_name": "Sales1 User",
+            "role": "sales",
+            "is_active": true,
+            "created_at": "08/11/2024"
         }
     },
     "products": {
@@ -46,6 +46,13 @@
         }
     },
     "activity_logs": [
+        {
+            "username": "admin",
+            "action": "create_user",
+            "details": "Created new user sales1",
+            "timestamp": "08/11/2024 02:05",
+            "ip_address": "127.0.0.1"
+        },
         {
             "username": "admin",
             "action": "user_activated",
