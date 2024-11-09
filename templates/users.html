@@ -103,7 +103,7 @@
             <div class="card h-100 border-0 shadow-sm">
                 <div class="card-body">
                     <h6 class="card-subtitle mb-2 text-muted">Users by Role</h6>
-                    {% set roles = {'manager': 0, 'sales': 0, 'customer': 0} %}
+                    {% set roles = {'manager': 0, 'sales': 0} %}
                     {% for user in users %}
                         {% if user.role in roles %}
                             {% set _ = roles.update({user.role: roles[user.role] + 1}) %}
