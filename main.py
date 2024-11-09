@@ -585,21 +585,37 @@ async def users_page(request: Request, current_user=Depends(get_current_user)):
 @app.post("/users/{username}/reset-password")
 async def reset_password(
     username: str,
-    password_data: dict,
     request: Request,
+    new_password: str = Form(...),
     current_user=Depends(get_current_user)
 ):
+    """Reset user password endpoint"""
+    # Check authorization
     if not current_user or current_user["role"] != "manager":
-        raise HTTPException(status_code=403, detail="Not authorized")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized. Manager role required."
+        )
     
     try:
+        # Input validation
+        if len(new_password) < 8:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Password must be at least 8 characters long"
+            )
+        
         db = load_database()
         
+        # Check if user exists
         if username not in db["users"]:
-            raise HTTPException(status_code=404, detail="User not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
         
         # Update password
-        db["users"][username]["password"] = hash_password(password_data["password"])
+        db["users"][username]["password"] = hash_password(new_password)
         save_database(db)
         
         # Log activity
@@ -610,12 +626,16 @@ async def reset_password(
             request
         )
         
-        return {"status": "success"}
+        return {"status": "success", "message": "Password reset successfully"}
         
+    except HTTPException as he:
+        raise he
     except Exception as e:
         print(f"Error resetting password: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error resetting password: {str(e)}"
+        )
 # Add status toggle endpoint
 @app.post("/users/{username}/toggle-status")
 async def toggle_user_status(

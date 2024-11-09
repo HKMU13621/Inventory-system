@@ -230,6 +230,7 @@ async function handleResetPassword(event) {
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Resetting...';
         
+        // Create FormData with the new_password field
         const formData = new FormData();
         formData.append('new_password', newPassword);
         
@@ -238,14 +239,18 @@ async function handleResetPassword(event) {
             body: formData
         });
         
-        const data = await response.json();
-        
         if (!response.ok) {
-            throw new Error(data.detail || 'Error resetting password');
+            const errorData = await response.json();
+            throw new Error(errorData.detail || 'Error resetting password');
         }
         
+        const data = await response.json();
         showAlert('Password reset successfully!', 'success');
-        modals.reset.hide();
+        
+        // Close the modal using Bootstrap
+        const modal = bootstrap.Modal.getInstance(document.getElementById('resetPasswordModal'));
+        modal.hide();
+        
     } catch (error) {
         console.error('Error:', error);
         showAlert(error.message, 'danger');
