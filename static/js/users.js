@@ -2,75 +2,36 @@
 
 let currentUsername = null;
 let modals = {};
-// Add debounce function to prevent too many searches while typing
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(this, args), wait);
-    };
-}
 
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('Initializing application...');
+    const editForm = document.getElementById('editUserForm');
+    if (editForm) {
+        editForm.addEventListener('submit', handleEditUser);
+        console.log('Edit form submit handler attached');
+    } else {
+        console.error('Edit form not found');
+    }
     // Initialize all modals
-    modals = {
-        add: new bootstrap.Modal(document.getElementById('addUserModal')),
-        edit: new bootstrap.Modal(document.getElementById('editUserModal')),
-        reset: new bootstrap.Modal(document.getElementById('resetPasswordModal'))
-    };
+    try {
+        modals = {
+            add: new bootstrap.Modal(document.getElementById('addUserModal')),
+            edit: new bootstrap.Modal(document.getElementById('editUserModal')),
+            reset: new bootstrap.Modal(document.getElementById('resetPasswordModal'))
+        };
+        console.log('Modals initialized:', modals);
+    } catch (error) {
+        console.error('Error initializing modals:', error);
+    }
 
     // Setup password validation
     setupPasswordValidation();
     
+    // Setup search and filter functionality
+    setupSearchAndFilter();
+    
     // Setup tooltips
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.map(function(tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-    const debouncedFilter = debounce(filterUsers, 300);
-    
-    const searchInput = document.getElementById('userSearch');
-    const roleSelect = document.getElementById('roleFilter');
-    
-    if (searchInput) {
-        searchInput.addEventListener('input', debouncedFilter);
-    }
-    
-    if (roleSelect) {
-        roleSelect.addEventListener('change', filterUsers);
-    }
-    
-    // Add keyboard shortcut for search (Ctrl + K or Command + K)
-    console.log('Initializing search and filter functionality');
-
-    // Initialize search input
-    if (searchInput) {
-        const debouncedFilter = debounce(filterUsers, 300);
-        searchInput.addEventListener('input', debouncedFilter);
-        console.log('Search input initialized');
-    } else {
-        console.warn('Search input not found');
-    }
-
-    // Initialize role filter
-    const roleFilter = document.getElementById('roleFilter');
-    if (roleFilter) {
-        roleFilter.addEventListener('change', filterUsers);
-        console.log('Role filter initialized');
-    } else {
-        console.warn('Role filter not found');
-    }
-
-    // Add keyboard shortcut
-    document.addEventListener('keydown', function(e) {
-        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-            e.preventDefault();
-            const searchInput = document.getElementById('userSearch');
-            if (searchInput) {
-                searchInput.focus();
-            }
-        }
-    });
+    setupTooltips();
 });
 
 function setupPasswordValidation() {
@@ -91,15 +52,192 @@ function setupPasswordValidation() {
     }
 }
 
-function showAddUserModal() {
-    document.getElementById('addUserForm').reset();
-    modals.add.show();
+function setupSearchAndFilter() {
+    const searchInput = document.getElementById('userSearch');
+    const roleSelect = document.getElementById('roleFilter');
+    
+    if (searchInput) {
+        const debouncedFilter = debounce(filterUsers, 300);
+        searchInput.addEventListener('input', debouncedFilter);
+        console.log('Search input initialized');
+    }
+    
+    if (roleSelect) {
+        roleSelect.addEventListener('change', filterUsers);
+        console.log('Role filter initialized');
+    }
+    
+    // Add keyboard shortcut (Ctrl/Cmd + K)
+    document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            e.preventDefault();
+            if (searchInput) searchInput.focus();
+        }
+    });
 }
 
-function closeModal(modalType) {
-    if (modals[modalType]) {
-        modals[modalType].hide();
+function setupTooltips() {
+    const tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    tooltips.forEach(tooltip => new bootstrap.Tooltip(tooltip));
+}
+
+function showAddUserModal() {
+    try {
+        document.getElementById('addUserForm').reset();
+        modals.add.show();
+    } catch (error) {
+        console.error('Error showing add user modal:', error);
+        showAlert('Error opening modal', 'danger');
     }
+}
+
+function editUser(username) {
+    console.log('Editing user:', username);
+    currentUsername = username;
+    
+    try {
+        // Get user data from the table row
+        const userRow = document.querySelector(`tr[data-username="${username}"]`);
+        if (!userRow) {
+            throw new Error('User row not found');
+        }
+        
+        // Get form fields
+        const form = document.getElementById('editUserForm');
+        const usernameInput = document.getElementById('edit-username');
+        const fullNameInput = document.getElementById('edit-full-name');
+        const emailInput = document.getElementById('edit-email');
+        const roleSelect = document.getElementById('edit-role');
+        
+        // Check if all form fields exist
+        if (!form || !usernameInput || !fullNameInput || !emailInput || !roleSelect) {
+            throw new Error('Form fields not found');
+        }
+        
+        // Fill form with user data
+        usernameInput.value = username;
+        fullNameInput.value = userRow.querySelector('td:nth-child(2)').textContent.trim();
+        emailInput.value = userRow.querySelector('td:nth-child(3)').textContent.trim();
+        
+        // Get role from badge
+        const roleBadge = userRow.querySelector('td:nth-child(4) .badge');
+        if (roleBadge) {
+            roleSelect.value = roleBadge.textContent.trim().toLowerCase();
+        }
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('editUserModal'));
+        modal.show();
+        
+    } catch (error) {
+        console.error('Error in editUser:', error);
+        showAlert(error.message, 'danger');
+    }
+}
+
+async function handleEditUser(event) {
+    event.preventDefault();
+    console.log('Handling edit user submission');
+    
+    const form = event.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    
+    try {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Updating...';
+        
+        // Get form data
+        const formData = new FormData(form);
+        
+        // Log form data for debugging
+        for (let [key, value] of formData.entries()) {
+            console.log(`${key}: ${value}`);
+        }
+        
+        const response = await fetch(`/users/${currentUsername}`, {
+            method: 'PUT',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.detail || 'Error updating user');
+        }
+        
+        // Show success message
+        showAlert('User updated successfully!', 'success');
+        
+        // Close modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('editUserModal'));
+        if (modal) {
+            modal.hide();
+        }
+        
+        // Reload page after short delay
+        setTimeout(() => window.location.reload(), 1000);
+        
+    } catch (error) {
+        console.error('Error:', error);
+        showAlert(error.message, 'danger');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+    }
+}
+
+
+function resetPassword(username) {
+    currentUsername = username;
+    document.getElementById('resetPasswordForm').reset();
+    document.getElementById('reset_username').value = username;
+    modals.reset.show();
+}
+
+async function handleResetPassword(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    
+    const newPassword = form.new_password.value;
+    const confirmPassword = form.confirm_new_password.value;
+    
+    if (newPassword !== confirmPassword) {
+        showAlert("Passwords don't match!", 'danger');
+        return false;
+    }
+    
+    try {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Resetting...';
+        
+        const formData = new FormData();
+        formData.append('new_password', newPassword);
+        
+        const response = await fetch(`/users/${currentUsername}/reset-password`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || 'Error resetting password');
+        }
+        
+        showAlert('Password reset successfully!', 'success');
+        modals.reset.hide();
+        
+    } catch (error) {
+        console.error('Error:', error);
+        showAlert(error.message, 'danger');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+    }
+    
+    return false;
 }
 
 async function handleAddUser(event) {
@@ -109,7 +247,6 @@ async function handleAddUser(event) {
     const submitBtn = form.querySelector('button[type="submit"]');
     const originalText = submitBtn.textContent;
     
-    // Password validation
     const password = form.password.value;
     const confirmPassword = form.confirm_password.value;
     
@@ -138,118 +275,6 @@ async function handleAddUser(event) {
         showAlert('User created successfully!', 'success');
         modals.add.hide();
         setTimeout(() => window.location.reload(), 1000);
-    } catch (error) {
-        console.error('Error:', error);
-        showAlert(error.message, 'danger');
-    } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = originalText;
-    }
-    
-    return false;
-}
-
-function editUser(username) {
-    currentUsername = username;
-    const form = document.getElementById('editUserForm');
-    
-    // Find user data
-    const userRow = document.querySelector(`tr[data-username="${username}"]`);
-    if (!userRow) return;
-    
-    // Fill form with user data
-    form.username.value = username;
-    form.full_name.value = userRow.children[1].textContent;
-    form.email.value = userRow.children[2].textContent;
-    form.role.value = userRow.getAttribute('data-role');
-    
-    modals.edit.show();
-}
-
-async function handleEditUser(event) {
-    event.preventDefault();
-    
-    const form = event.target;
-    const submitBtn = form.querySelector('button[type="submit"]');
-    const originalText = submitBtn.textContent;
-    
-    try {
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Updating...';
-        
-        const formData = new FormData(form);
-        
-        const response = await fetch(`/users/${currentUsername}`, {
-            method: 'PUT',
-            body: formData
-        });
-        
-        const data = await response.json();
-        
-        if (!response.ok) {
-            throw new Error(data.detail || 'Error updating user');
-        }
-        
-        showAlert('User updated successfully!', 'success');
-        modals.edit.hide();
-        setTimeout(() => window.location.reload(), 1000);
-    } catch (error) {
-        console.error('Error:', error);
-        showAlert(error.message, 'danger');
-    } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = originalText;
-    }
-    
-    return false;
-}
-
-function resetPassword(username) {
-    currentUsername = username;
-    document.getElementById('resetPasswordForm').reset();
-    document.getElementById('reset_username').value = username;
-    modals.reset.show();
-}
-
-async function handleResetPassword(event) {
-    event.preventDefault();
-    
-    const form = event.target;
-    const submitBtn = form.querySelector('button[type="submit"]');
-    const originalText = submitBtn.textContent;
-    
-    const newPassword = form.new_password.value;
-    const confirmPassword = form.confirm_new_password.value;
-    
-    if (newPassword !== confirmPassword) {
-        showAlert("Passwords don't match!", 'danger');
-        return false;
-    }
-    
-    try {
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Resetting...';
-        
-        // Create FormData with the new_password field
-        const formData = new FormData();
-        formData.append('new_password', newPassword);
-        
-        const response = await fetch(`/users/${currentUsername}/reset-password`, {
-            method: 'POST',
-            body: formData
-        });
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.detail || 'Error resetting password');
-        }
-        
-        const data = await response.json();
-        showAlert('Password reset successfully!', 'success');
-        
-        // Close the modal using Bootstrap
-        const modal = bootstrap.Modal.getInstance(document.getElementById('resetPasswordModal'));
-        modal.hide();
         
     } catch (error) {
         console.error('Error:', error);
@@ -269,8 +294,8 @@ async function toggleUserStatus(username) {
     
     try {
         const userRow = document.querySelector(`tr[data-username="${username}"]`);
-        const statusCell = userRow.querySelector('.badge');
-        const isActive = statusCell.textContent.trim() === 'Active';
+        const statusBadge = userRow.querySelector('.status-badge');
+        const isActive = statusBadge.textContent.trim() === 'Active';
         
         const response = await fetch(`/users/${username}/toggle-status`, {
             method: 'POST',
@@ -280,14 +305,14 @@ async function toggleUserStatus(username) {
             body: JSON.stringify({ is_active: !isActive })
         });
         
-        const data = await response.json();
-        
         if (!response.ok) {
+            const data = await response.json();
             throw new Error(data.detail || 'Error updating user status');
         }
         
         showAlert('User status updated successfully!', 'success');
         setTimeout(() => window.location.reload(), 1000);
+        
     } catch (error) {
         console.error('Error:', error);
         showAlert(error.message, 'danger');
@@ -295,67 +320,52 @@ async function toggleUserStatus(username) {
 }
 
 function filterUsers() {
-    // Get filter values
     const searchTerm = document.getElementById('userSearch')?.value.toLowerCase().trim() || '';
     const roleFilter = document.getElementById('roleFilter')?.value.toLowerCase() || '';
     
-    // Get all user rows
     const tableRows = document.querySelectorAll('table.user-table tbody tr');
-    
-    // Debug logging
-    console.log('Filtering with:', { searchTerm, roleFilter });
-    console.log('Found rows:', tableRows.length);
-
     let visibleCount = 0;
-
-    // Filter each row
+    
     tableRows.forEach(row => {
+        if (row.classList.contains('no-results')) return;
+        
         try {
-            // Get text content safely with null checks
             const username = row.cells[0]?.textContent?.toLowerCase() || '';
             const fullName = row.cells[1]?.textContent?.toLowerCase() || '';
             const email = row.cells[2]?.textContent?.toLowerCase() || '';
             const role = row.cells[3]?.querySelector('.badge')?.textContent?.toLowerCase() || '';
-
-            // Debug logging for each row
-            console.log('Row data:', { username, fullName, email, role });
-
-            // Check if row matches both filters
+            
             const matchesSearch = !searchTerm || 
                 username.includes(searchTerm) || 
                 fullName.includes(searchTerm) || 
                 email.includes(searchTerm) ||
                 role.includes(searchTerm);
-
+                
             const matchesRole = !roleFilter || role.includes(roleFilter);
-
-            // Show/hide row
+            
             if (matchesSearch && matchesRole) {
                 row.style.display = '';
                 visibleCount++;
             } else {
                 row.style.display = 'none';
             }
+            
         } catch (error) {
             console.error('Error processing row:', error);
             row.style.display = 'none';
         }
     });
-
-    // Update no-results message
+    
     updateNoResultsMessage(visibleCount, searchTerm, roleFilter);
 }
+
 function updateNoResultsMessage(visibleCount, searchTerm, roleFilter) {
     const tbody = document.querySelector('table.user-table tbody');
     if (!tbody) return;
-
-    // Remove existing no-results message if it exists
+    
     const existingMessage = tbody.querySelector('.no-results');
-    if (existingMessage) {
-        existingMessage.remove();
-    }
-
-    // Add no-results message if needed
+    if (existingMessage) existingMessage.remove();
+    
     if (visibleCount === 0) {
         const noResultsRow = document.createElement('tr');
         noResultsRow.className = 'no-results';
@@ -370,12 +380,20 @@ function updateNoResultsMessage(visibleCount, searchTerm, roleFilter) {
     }
 }
 
+function clearSearch() {
+    const searchInput = document.getElementById('userSearch');
+    const roleSelect = document.getElementById('roleFilter');
+    
+    if (searchInput) searchInput.value = '';
+    if (roleSelect) roleSelect.value = '';
+    
+    filterUsers();
+}
 
 function showAlert(message, type = 'info') {
     const alertPlaceholder = document.createElement('div');
     alertPlaceholder.className = 'position-fixed top-0 start-50 translate-middle-x mt-3';
     alertPlaceholder.style.zIndex = '9999';
-    document.body.appendChild(alertPlaceholder);
     
     const alert = `
         <div class="alert alert-${type} alert-dismissible fade show" role="alert">
@@ -385,26 +403,37 @@ function showAlert(message, type = 'info') {
     `;
     
     alertPlaceholder.innerHTML = alert;
+    document.body.appendChild(alertPlaceholder);
     
-    // Auto remove after 3 seconds
     setTimeout(() => {
         const alertElement = alertPlaceholder.querySelector('.alert');
         if (alertElement) {
-            const bsAlert = new bootstrap.Alert(alertElement);
-            bsAlert.close();
+            new bootstrap.Alert(alertElement).close();
         }
         setTimeout(() => alertPlaceholder.remove(), 150);
     }, 3000);
-}function clearSearch() {
-    const searchInput = document.getElementById('userSearch');
-    const roleSelect = document.getElementById('roleFilter');
+}
+
+function debounce(func, wait) {
+    let timeout;
+    return function (...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+}
+
+function togglePasswordVisibility(inputId) {
+    const input = document.getElementById(inputId);
+    const button = input.nextElementSibling;
+    const icon = button.querySelector('i');
     
-    if (searchInput) {
-        searchInput.value = '';
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('bi-eye');
+        icon.classList.add('bi-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('bi-eye-slash');
+        icon.classList.add('bi-eye');
     }
-    if (roleSelect) {
-        roleSelect.value = '';
-    }
-    
-    filterUsers();
 }
